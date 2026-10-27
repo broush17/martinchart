@@ -1,0 +1,2089 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Martin's Chore Chart</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+
+<!-- Tailwind (play CDN) -->
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      // Only two typefaces anywhere: Adobe Caslon Pro (italic headers) and Purisa (body)
+      fontFamily: {
+        display: ['"Adobe Caslon Pro"'],
+        body: ['Purisa'],
+        sans: ['Purisa'],
+        serif: ['"Adobe Caslon Pro"'],
+        mono: ['Purisa'],
+      },
+      extend: {
+        colors: {
+          cobalt: '#4A69B3',   // gingham, tabs, headings
+          rust: '#BA3801',     // Martin's frame + meter band, barn, accents
+          gold: '#F4D242',     // star outlines
+          butter: '#FFEC89',   // filled stars, text on rust
+          paper: '#F1E9D1',    // paper + anything white
+          ink: '#1E2A4A',      // body text (deep shade of the cobalt)
+          lemon: '#FFF6C4',    // Light work
+          apricot: '#FFD27F',  // Easy
+          sprout: '#CDE6A5',   // Medium
+          moss: '#2F5A2A',     // Hard
+          cherry: '#C9302C',   // Difficult
+        },
+      },
+    },
+  };
+</script>
+
+<style>
+  /*
+    FONTS — Adobe Caslon Pro and Purisa are referenced by their exact family names, with
+    no substitutes. If both are installed on the device viewing the page, they load as-is.
+    If you host the font files with the project instead, uncomment these and point the
+    url() at your files (keep the family names exactly the same):
+
+  @font-face { font-family: "Adobe Caslon Pro"; font-style: italic; font-weight: 400;
+               src: url("fonts/ACaslonPro-Italic.otf") format("opentype"); }
+  @font-face { font-family: "Adobe Caslon Pro"; font-style: italic; font-weight: 600;
+               src: url("fonts/ACaslonPro-SemiboldItalic.otf") format("opentype"); }
+  @font-face { font-family: "Purisa"; font-style: normal; font-weight: 400;
+               src: url("fonts/Purisa.ttf") format("truetype"); }
+  @font-face { font-family: "Purisa"; font-style: normal; font-weight: 700;
+               src: url("fonts/Purisa-Bold.ttf") format("truetype"); }
+  */
+
+  /* Layout concept: one picnic-cloth column — Martin on his farm hillside at the top,
+     torn-notebook sheets for each list, all over faded cobalt gingham. */
+  :root {
+    --cobalt: #4A69B3;
+    --rust: #BA3801;
+    --gold: #F4D242;
+    --butter: #FFEC89;
+    --paper: #F1E9D1;
+    --ink: #1E2A4A;
+    --rule: #D3C5A3;
+    --font-display: "Adobe Caslon Pro";
+    --font-body: "Purisa";
+    color-scheme: light;
+  }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+  }
+  body { min-height: 100%; -webkit-font-smoothing: antialiased; }
+
+  /* Faded gingham: #4A69B3 checks at 70% transparency (opacity .3) */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.3;
+    background-image:
+      var(--weave, none),
+      linear-gradient(90deg, rgba(74, 105, 179, 0.55) 50%, transparent 50%),
+      linear-gradient(rgba(74, 105, 179, 0.55) 50%, transparent 50%);
+    background-size: 160px 160px, 44px 44px, 44px 44px;
+  }
+
+  #root { position: relative; z-index: 1; }
+
+  .gutter {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .font-display, h1, h2, h3 {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    text-wrap: balance;
+  }
+  .font-body, button, input, select, textarea, option { font-family: var(--font-body); }
+
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* Torn-notebook sheet with punched holes */
+  .sheet-wrap { filter: drop-shadow(0 8px 16px rgba(30, 42, 74, 0.16)) drop-shadow(0 1px 1px rgba(30, 42, 74, 0.2)); }
+  .sheet {
+    background-color: var(--paper);
+    background-image: var(--grain, none);
+    background-size: 200px 200px;
+    border-radius: 6px;
+    padding-top: 46px;
+    -webkit-mask-image: radial-gradient(circle at 50% 22px, transparent 7px, #000 7.6px);
+            mask-image: radial-gradient(circle at 50% 22px, transparent 7px, #000 7.6px);
+    -webkit-mask-size: 38px 100%;
+            mask-size: 38px 100%;
+    -webkit-mask-repeat: round no-repeat;
+            mask-repeat: round no-repeat;
+  }
+
+  .meter-cell { aspect-ratio: 6 / 7; max-width: 100%; }
+
+  /* Hollow gold stars get a hairline shadow so they read on the paper */
+  .star-svg { filter: drop-shadow(0 1px 0 rgba(30, 42, 74, 0.25)); }
+
+  .honk {
+    position: absolute;
+    top: 2px;
+    left: -6px;
+    z-index: 2;
+    background: var(--paper);
+    color: var(--rust);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.15rem;
+    padding: 4px 12px 5px;
+    border-radius: 999px 999px 999px 4px;
+    box-shadow: 0 4px 10px rgba(30, 42, 74, 0.22);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .modal-pad {
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Habit boxes: today gets a rust outline */
+  .habit-today { outline: 2px solid var(--rust); outline-offset: 1px; }
+
+  :focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; border-radius: 8px; }
+  input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root">
+  <p style="text-align:center;padding:48px 16px;font-family:var(--font-display);font-style:italic;font-size:1.4rem;color:var(--rust)">Waking Martin up…</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/framer-motion@11.0.3/dist/framer-motion.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+const { motion, AnimatePresence, useAnimationControls, MotionConfig } = window.Motion;
+
+/* ───────────────────────── Textures ───────────────────────── */
+const svgUrl = (svg) => `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+const WEAVE = svgUrl(`<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>`);
+const GRAIN = svgUrl(`<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .3  0 0 0 0 .26  0 0 0 0 .15  0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(#g)'/></svg>`);
+document.documentElement.style.setProperty('--weave', WEAVE);
+document.documentElement.style.setProperty('--grain', GRAIN);
+
+/* ───────────────────────── Household setup ───────────────────────── */
+const USERS = ['Bailey', 'Samuel'];
+const OWNERS = ['team', ...USERS]; // 'team' = the shared Teamwork page
+const ROOMS = ['Kitchen', 'Master Bathroom', 'Living Room', 'Bedroom', 'Study Room', 'Sewing Room', 'Guest Bedroom', 'Garage', 'Spare Bathroom', 'Around the house'];
+const FREQ_DAYS = { daily: 1, weekly: 7, monthly: 30 };
+const FREQ_LABEL = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+const DIFFICULTIES = ['Light work', 'Easy', 'Medium', 'Hard', 'Difficult'];
+const REWARD = { 'Light work': 4, Easy: 6, Medium: 8, Hard: 11, Difficult: 14 }; // meter points per finished task
+const HABIT_REWARD = 3;        // meter points per habit box checked
+const STEP_REWARD = 6;         // meter points per goal step
+const GOAL_BONUS = 10;         // extra points when a whole goal is reached
+const DRAIN_PER_HOUR = 0.75;   // % lost per overdue task per hour (grows the longer it's overdue)
+const MAX_CATCH_UP = 60;       // most Martin can lose while the app was closed
+const STORAGE_KEY = 'martin-chore-chart-v1';
+const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+// [room, chore, frequency, difficulty, due in N days from first launch (negative = already overdue)]
+const STARTER_CHORES = [
+  ['Kitchen', 'Wipe down counters', 'daily', 'Easy', 0],
+  ['Kitchen', 'Run & unload the dishwasher', 'daily', 'Light work', -1],
+  ['Kitchen', 'Take out the trash', 'weekly', 'Light work', 1],
+  ['Kitchen', 'Mop the floor', 'weekly', 'Medium', 2],
+  ['Master Bathroom', 'Clean the toilet', 'weekly', 'Medium', -2],
+  ['Master Bathroom', 'Scrub shower & tub', 'weekly', 'Difficult', 1],
+  ['Master Bathroom', 'Wipe mirror & sink', 'weekly', 'Easy', 3],
+  ['Master Bathroom', 'Swap out towels', 'weekly', 'Light work', 0],
+  ['Living Room', 'Vacuum the rug', 'weekly', 'Medium', 1],
+  ['Living Room', 'Dust shelves & TV stand', 'weekly', 'Easy', 4],
+  ['Living Room', 'Tidy up & fluff pillows', 'daily', 'Light work', 0],
+  ['Bedroom', 'Make the bed', 'daily', 'Light work', 0],
+  ['Bedroom', 'Change the sheets', 'weekly', 'Medium', 2],
+  ['Bedroom', 'Laundry: wash, dry & fold', 'weekly', 'Hard', -1],
+  ['Bedroom', 'Vacuum the floor', 'weekly', 'Medium', 5],
+  ['Study Room', 'Clear off the desk', 'daily', 'Light work', 0],
+  ['Study Room', 'Dust desk & monitor', 'weekly', 'Easy', 2],
+  ['Study Room', 'Empty the paper bin', 'weekly', 'Light work', 6],
+  ['Sewing Room', 'Put away fabric & notions', 'weekly', 'Easy', 1],
+  ['Sewing Room', 'Vacuum up thread & scraps', 'weekly', 'Medium', 3],
+  ['Sewing Room', 'Clean lint from the sewing machine', 'weekly', 'Hard', 8],
+  ['Guest Bedroom', 'Dust all surfaces', 'weekly', 'Easy', 4],
+  ['Guest Bedroom', 'Refresh the bed linens', 'weekly', 'Medium', 9],
+  ['Guest Bedroom', 'Vacuum the floor', 'weekly', 'Medium', 6],
+  ['Garage', 'Sweep the floor', 'weekly', 'Hard', 2],
+  ['Garage', 'Organize tools & shelves', 'weekly', 'Difficult', 10],
+  ['Garage', 'Roll the bins to the curb', 'weekly', 'Easy', -3],
+  ['Spare Bathroom', 'Clean the toilet', 'weekly', 'Medium', 1],
+  ['Spare Bathroom', 'Wipe sink & mirror', 'weekly', 'Easy', 2],
+  ['Spare Bathroom', 'Mop the floor', 'weekly', 'Medium', 7],
+];
+
+/* Quick-add ideas: [chore, frequency, difficulty] */
+const BATHROOM_IDEAS = [
+  ['Wash the bath mats', 'weekly', 'Easy'],
+  ['Restock toilet paper & soap', 'weekly', 'Light work'],
+  ['Wipe down the shower glass', 'weekly', 'Medium'],
+  ['Empty the bathroom trash', 'weekly', 'Light work'],
+  ['Clear the drains', 'monthly', 'Medium'],
+  ['Scrub the grout', 'monthly', 'Difficult'],
+];
+const QUICK_CHORES = {
+  'Kitchen': [
+    ['Hand-wash pots & pans', 'daily', 'Easy'],
+    ['Wipe out the microwave', 'weekly', 'Easy'],
+    ['Wash the dish towels', 'weekly', 'Light work'],
+    ['Scrub the stovetop', 'weekly', 'Medium'],
+    ['Clean out the fridge', 'weekly', 'Hard'],
+    ['Descale the coffee maker', 'monthly', 'Easy'],
+    ['Wipe the cabinet fronts', 'monthly', 'Medium'],
+    ['Deep clean the oven', 'monthly', 'Difficult'],
+  ],
+  'Master Bathroom': BATHROOM_IDEAS,
+  'Spare Bathroom': BATHROOM_IDEAS,
+  'Living Room': [
+    ['Wipe the coffee table', 'daily', 'Light work'],
+    ['Water the plants', 'weekly', 'Light work'],
+    ['Vacuum the couch cushions', 'weekly', 'Medium'],
+    ['Wash the throw blankets', 'monthly', 'Easy'],
+    ['Clean the windows', 'monthly', 'Hard'],
+  ],
+  'Bedroom': [
+    ['Put away clean clothes', 'daily', 'Light work'],
+    ['Clear the nightstands', 'weekly', 'Light work'],
+    ['Rotate the mattress', 'monthly', 'Hard'],
+    ['Wash pillows & duvet', 'monthly', 'Hard'],
+    ['Organize the closet', 'monthly', 'Difficult'],
+  ],
+  'Guest Bedroom': [
+    ['Air out the room', 'weekly', 'Light work'],
+    ['Set out fresh towels', 'weekly', 'Light work'],
+    ['Clear the closet for guests', 'monthly', 'Medium'],
+    ['Wash the duvet', 'monthly', 'Hard'],
+  ],
+  'Study Room': [
+    ['Wipe keyboard & mouse', 'weekly', 'Light work'],
+    ['File loose papers', 'weekly', 'Easy'],
+    ['Shred old mail', 'monthly', 'Easy'],
+    ['Tidy the bookshelf', 'monthly', 'Medium'],
+  ],
+  'Sewing Room': [
+    ['Empty the thread-scrap bin', 'weekly', 'Light work'],
+    ['Wind & sort bobbins', 'weekly', 'Easy'],
+    ['Change the machine needle', 'monthly', 'Easy'],
+    ['Oil the sewing machine', 'monthly', 'Medium'],
+    ['Fold the fabric stash', 'monthly', 'Medium'],
+  ],
+  'Garage': [
+    ['Break down boxes', 'weekly', 'Easy'],
+    ['Sweep out cobwebs', 'monthly', 'Medium'],
+    ['Drop off donations', 'monthly', 'Medium'],
+    ['Clean out the car', 'monthly', 'Hard'],
+    ['Hose off the trash bins', 'monthly', 'Hard'],
+  ],
+  'Around the house': [
+    ['Get the mail', 'daily', 'Light work'],
+    ['Water the plants', 'weekly', 'Light work'],
+    ['Wipe light switches & door handles', 'weekly', 'Easy'],
+    ['Grocery run', 'weekly', 'Medium'],
+    ['Meal prep for the week', 'weekly', 'Hard'],
+    ['Test the smoke detectors', 'monthly', 'Light work'],
+    ['Change the air filter', 'monthly', 'Easy'],
+    ['Dust the baseboards', 'monthly', 'Medium'],
+  ],
+};
+const ANY_ROOM_IDEAS = [
+  ['Declutter for 10 minutes', 'daily', 'Light work'],
+  ['Empty the trash', 'weekly', 'Light work'],
+  ['Dust surfaces', 'weekly', 'Easy'],
+  ['Vacuum', 'weekly', 'Medium'],
+  ['Mop the floor', 'weekly', 'Medium'],
+  ['Dust the ceiling fan', 'monthly', 'Medium'],
+  ['Wash the windows', 'monthly', 'Hard'],
+];
+const PERSONAL_IDEAS = [
+  ['Fold my laundry', 'Easy'],
+  ['Clear off my desk', 'Light work'],
+  ['Tidy my side of the closet', 'Medium'],
+  ['Return a package', 'Light work'],
+  ['Pay a bill', 'Light work'],
+  ['Make an appointment', 'Light work'],
+  ['Clean out my car', 'Hard'],
+  ['Wash my water bottle', 'Light work'],
+];
+
+const STARTER_PERSONAL = {
+  Bailey: [['Hem the linen curtains', 'Medium', 1], ['Return library books', 'Light work', 0]],
+  Samuel: [['Wash the car', 'Medium', 2], ['Fix the squeaky closet door', 'Easy', 3]],
+};
+
+/* Goals: [goal, target date in N days from first launch, steps] */
+const STARTER_GOALS = {
+  team: [
+    ['Set up a weekly meal plan', 14, ['Pick 10 go-to dinners', 'Make a master grocery list', 'Try one new recipe']],
+    ['Get the guest bedroom ready for visitors', 21, ['Clear out the closet', 'Wash the duvet & linens', 'Hang new curtains', 'Set out a towel basket']],
+    ['Organize the garage', 35, ['Sort the tools', 'Drop off donations', 'Put up wall shelves']],
+    ['Deep clean every room this season', 60, ['Kitchen', 'Bathrooms', 'Living Room', 'Bedrooms', 'Study & Sewing Room', 'Garage']],
+  ],
+  Bailey: [
+    ['Organize the sewing room', 20, ['Sort the fabric stash', 'Label the notions drawers', 'Hang a pegboard']],
+    ['Sew a quilt for the guest bed', 45, ['Pick a pattern', 'Buy the fabric', 'Cut the pieces', 'Piece the top', 'Quilt & bind it']],
+    ['Read 4 books this fall', 50, ['Book 1', 'Book 2', 'Book 3', 'Book 4']],
+  ],
+  Samuel: [
+    ['Fix the little things around the house', 14, ['Tighten the loose cabinet handles', 'Patch the hallway nail holes', 'Replace the porch light bulb']],
+    ['Build a garage workbench', 40, ['Sketch the plan', 'Buy the lumber', 'Cut & assemble', 'Stain & seal']],
+    ['Run a 5K', 60, ['Run 1 mile without stopping', 'Run 2 miles', 'Sign up for a race', 'Run the race']],
+  ],
+};
+const GOAL_IDEAS = {
+  team: [
+    ['Host dinner for friends', ['Pick a date', 'Plan the menu', 'Clean & set the table']],
+    ['Declutter the whole house', ['Closets', 'Kitchen cabinets', 'Bookshelves', 'Garage']],
+    ['Plant a spring garden', ['Pick the plants', 'Prep the beds', 'Plant & mulch']],
+    ['Make the living room cozier', ['Find a new rug', 'Hang some art', 'Add a reading lamp']],
+  ],
+  personal: [
+    ['Learn a new skill', ['Pick the skill', 'Find a class or tutorial', 'Practice 5 times']],
+    ['Clear out my closet', ['Sort keep & donate', 'Drop off donations', 'Organize what’s left']],
+    ['Finish a hobby project', ['Gather supplies', 'Make a first attempt', 'Finish it']],
+    ['Get my desk organized', ['Clear everything off', 'Sort the drawers', 'Set up a filing tray']],
+  ],
+};
+
+const STARTER_HABITS = {
+  team: ['Make the bed', 'Dishes done before bed', '10-minute evening tidy', 'Cook dinner at home'],
+  Bailey: ['Drink 8 glasses of water', 'Read for 20 minutes', 'Sew for 15 minutes'],
+  Samuel: ['Go for a walk', 'Read for 20 minutes', 'Phone down by 10pm'],
+};
+const HABIT_IDEAS = {
+  team: ['Wipe the counters', 'Laundry put away', 'Water the plants', 'Plan tomorrow together', 'Take out the trash', 'Eat breakfast together'],
+  personal: ['Stretch for 10 minutes', 'Journal', 'Plan tomorrow', 'Practice an instrument', 'Take a walk', 'Write a gratitude note'],
+};
+
+/* ───────────────────────── Date helpers (local YYYY-MM-DD keys) ───────────────────────── */
+const pad = (n) => String(n).padStart(2, '0');
+const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromKey = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n); return toKey(d); };
+const diffDays = (a, b) => Math.round((fromKey(a) - fromKey(b)) / 864e5);
+const weekEnd = (k) => { const dow = fromKey(k).getDay(); return addDays(k, dow === 0 ? 0 : 7 - dow); }; // Sunday
+const weekStart = (k) => addDays(weekEnd(k), -6); // Monday
+const shortDate = (k, today) => {
+  const d = diffDays(k, today);
+  const date = fromKey(k);
+  if (d === 0) return 'today';
+  if (d === 1) return 'tomorrow';
+  if (d > 1 && d < 7) return date.toLocaleDateString('en-US', { weekday: 'long' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+const monthOf = (k) => k.slice(0, 7);
+const monthKeys = (ym) => {
+  const [y, m] = ym.split('-').map(Number);
+  const n = new Date(y, m, 0).getDate();
+  return Array.from({ length: n }, (_, i) => `${ym}-${pad(i + 1)}`);
+};
+const shiftMonth = (ym, n) => {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+};
+const monthLabel = (ym) => fromKey(`${ym}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+const monthName = (ym) => fromKey(`${ym}-01`).toLocaleDateString('en-US', { month: 'long' });
+const mondayIndex = (k) => (fromKey(k).getDay() + 6) % 7;
+const longDay = (k) => fromKey(k).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+const clamp = (n, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+/* ───────────────────────── Goals & habits helpers ───────────────────────── */
+const makeGoal = (title, due, steps) => ({
+  id: uid(), title, due: due || null, doneOn: null,
+  steps: steps.map((s) => ({ id: uid(), title: s, done: false })),
+});
+const makeHabit = (title) => ({ id: uid(), title, checks: {} });
+
+function starterGoals(today) {
+  const out = {};
+  OWNERS.forEach((o) => { out[o] = STARTER_GOALS[o].map(([t, off, steps]) => makeGoal(t, addDays(today, off), steps)); });
+  return out;
+}
+function starterHabits() {
+  const out = {};
+  OWNERS.forEach((o) => { out[o] = STARTER_HABITS[o].map(makeHabit); });
+  return out;
+}
+
+const goalProgress = (g) => {
+  const done = g.steps.filter((s) => s.done).length;
+  return { done, total: g.steps.length, pct: g.steps.length ? done / g.steps.length : 0 };
+};
+const isGoalDone = (g) => g.steps.length > 0 && g.steps.every((s) => s.done);
+const sortGoals = (goals) => [...goals].sort((a, b) => {
+  const ad = isGoalDone(a), bd = isGoalDone(b);
+  if (ad !== bd) return ad ? 1 : -1;
+  const x = a.due || '9999', y = b.due || '9999';
+  return x < y ? -1 : x > y ? 1 : 0;
+});
+function goalDue(g, today) {
+  if (isGoalDone(g)) return { text: `Reached ${g.doneOn ? shortDate(g.doneOn, today) : ''}`.trim(), cls: 'text-moss font-bold' };
+  if (!g.due) return { text: 'No target date', cls: 'text-ink/60' };
+  const d = diffDays(g.due, today);
+  if (d < 0) return { text: `Target was ${shortDate(g.due, today)}`, cls: 'text-rust font-bold' };
+  if (d === 0) return { text: 'Target is today', cls: 'text-cobalt font-bold' };
+  return { text: `Target ${shortDate(g.due, today)}`, cls: 'text-ink/65' };
+}
+
+function habitStreak(h, today) {
+  let d = h.checks[today] ? today : addDays(today, -1);
+  let n = 0;
+  while (h.checks[d]) { n++; d = addDays(d, -1); }
+  return n;
+}
+const habitMonthCount = (h, ym) => Object.keys(h.checks).filter((k) => h.checks[k] && k.startsWith(ym)).length;
+
+/* ───────────────────────── State ───────────────────────── */
+function makeInitialState(today) {
+  const personal = {};
+  USERS.forEach((u) => {
+    personal[u] = STARTER_PERSONAL[u].map(([title, difficulty, off]) => ({
+      id: uid(), title, difficulty, due: addDays(today, off), done: false, doneOn: null,
+    }));
+  });
+  return {
+    tasks: STARTER_CHORES.map(([room, title, freq, difficulty, off], i) => ({
+      id: 't' + i, room, title, freq, difficulty,
+      due: addDays(today, off), lastDone: null, doneBy: null, undo: null,
+    })),
+    personal,
+    goals: starterGoals(today),
+    habits: starterHabits(),
+    water: 62,
+    food: 54,
+    lastTick: Date.now(),
+    who: 'Bailey',
+    log: [],
+  };
+}
+
+function loadState(today) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && Array.isArray(s.tasks) && s.personal) {
+        // Older saves had no goals or habits yet: give them the starter set
+        if (!s.goals) s.goals = starterGoals(today);
+        if (!s.habits) s.habits = starterHabits();
+        if (!Array.isArray(s.log)) s.log = [];
+        OWNERS.forEach((o) => {
+          if (!Array.isArray(s.goals[o])) s.goals[o] = [];
+          if (!Array.isArray(s.habits[o])) s.habits[o] = [];
+        });
+        USERS.forEach((u) => { if (!Array.isArray(s.personal[u])) s.personal[u] = []; });
+        return s;
+      }
+    }
+  } catch (e) { /* storage unavailable — start fresh */ }
+  return makeInitialState(today);
+}
+
+// A shared chore counts as done until it comes due again.
+const isDone = (t, today) => !!t.lastDone && diffDays(t.due, today) > 0;
+const byDue = (a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : DIFFICULTIES.indexOf(b.difficulty) - DIFFICULTIES.indexOf(a.difficulty));
+
+function overdueWeight(due, today) {
+  const late = diffDays(today, due);
+  if (late <= 0) return 0;
+  return Math.min(3, 1 + 0.5 * (late - 1)); // 1×, 1.5×, 2× … capped at 3×
+}
+
+function drainInfo(s, today) {
+  let rate = 0, count = 0;
+  s.tasks.forEach((t) => {
+    if (isDone(t, today)) return;
+    const w = overdueWeight(t.due, today);
+    if (w) { rate += w; count++; }
+  });
+  USERS.forEach((u) => (s.personal[u] || []).forEach((p) => {
+    if (p.done || !p.due) return;
+    const w = overdueWeight(p.due, today);
+    if (w) { rate += w; count++; }
+  }));
+  return { rate: rate * DRAIN_PER_HOUR, count };
+}
+
+function getMood(water, food) {
+  const low = Math.min(water, food);
+  if (low >= 70) return { key: 'happy', text: 'Martin is happy and well fed. Look at him strut.' };
+  if (low >= 40) return { key: 'content', text: 'Martin is doing fine. A few more stars would make his day.' };
+  if (low >= 15) return water < food
+    ? { key: 'thirsty', text: "Martin's pond is running low. Finish a chore to top it up." }
+    : { key: 'hungry', text: "Martin keeps eyeing the strawberries. He's getting hungry." };
+  return { key: 'starving', text: 'Martin is weak and wobbly. Overdue chores are draining him.' };
+}
+
+/* ───────────────────────── Icons ───────────────────────── */
+function PlusIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} aria-hidden="true">
+      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function XIcon({ className = 'h-4 w-4' }) {
+  return (
+    <svg viewBox="0 0 20 20" className={className} aria-hidden="true">
+      <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function Droplet({ empty }) {
+  return (
+    <svg viewBox="0 0 24 28" className="block w-full h-full" aria-hidden="true">
+      <path d="M12 2.5C12 2.5 4.2 11.6 4.2 17.6a7.8 7.8 0 0 0 15.6 0C19.8 11.6 12 2.5 12 2.5Z"
+        fill={empty ? 'rgba(74,105,179,.08)' : '#7C98DA'}
+        stroke={empty ? 'rgba(74,105,179,.35)' : '#4A69B3'} strokeWidth="1.4" strokeLinejoin="round" />
+      {!empty && <path d="M8.3 16.6c0 2.3 1.4 4.1 3.3 4.7" stroke="#F1E9D1" strokeOpacity=".9" strokeWidth="1.7" fill="none" strokeLinecap="round" />}
+    </svg>
+  );
+}
+
+function Strawberry({ empty }) {
+  const seeds = [[8.4, 13.2], [12, 12.4], [15.6, 13.2], [10, 16.8], [14, 16.8], [12, 20.6], [7.6, 17.4], [16.4, 17.4]];
+  return (
+    <svg viewBox="0 0 24 28" className="block w-full h-full" aria-hidden="true">
+      <path d="M12 8.6C18 8.1 21.4 10.6 20.5 15.1 19.5 20.1 15 25.4 12 25.4S4.5 20.1 3.5 15.1C2.6 10.6 6 8.1 12 8.6Z"
+        fill={empty ? 'rgba(186,56,1,.06)' : '#C9302C'}
+        stroke={empty ? 'rgba(186,56,1,.32)' : '#8E1F17'} strokeWidth="1.3" strokeLinejoin="round" />
+      {!empty && seeds.map(([x, y], i) => <ellipse key={i} cx={x} cy={y} rx=".6" ry=".95" fill="#FFEC89" />)}
+      <path d="M12 9.6 7 6.6l3-.6L8.6 3 12 5.6 15.4 3 14 6l3 .6Z" fill={empty ? 'rgba(47,90,42,.25)' : '#2F5A2A'} />
+      <path d="M12 5.6V2" stroke={empty ? 'rgba(47,90,42,.3)' : '#2F5A2A'} strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* ───────────────────────── Farm scene behind Martin ───────────────────────── */
+function rng(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+const MEADOW = (() => {
+  const r = rng(42);
+  const blades = [], flowers = [];
+  for (let i = 0; i < 90; i++) {
+    const x = r() * 800, base = 425 + r() * 40, h = 18 + r() * 30, lean = (r() - 0.5) * 22;
+    blades.push({ d: `M${x.toFixed(1)} ${base.toFixed(1)} q${(lean / 2).toFixed(1)} ${(-h / 2).toFixed(1)} ${lean.toFixed(1)} ${(-h).toFixed(1)}`, c: r() > 0.5 ? '#7FAE52' : '#9BC46A' });
+    if (r() > 0.6) flowers.push({ x: x + lean, y: base - h, c: r() > 0.35 ? '#F4D242' : '#F1E9D1', rot: (r() - 0.5) * 60 });
+  }
+  return { blades, flowers };
+})();
+
+function FarmScene() {
+  return (
+    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 800 460" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="farmSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#7D9AD3" />
+          <stop offset=".3" stopColor="#AFC3E6" />
+          <stop offset=".56" stopColor="#E6E6DA" />
+          <stop offset=".7" stopColor="#F1E9D1" />
+        </linearGradient>
+        <filter id="wash" x="-10%" y="-20%" width="120%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="3" seed="4" result="t" />
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="9" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="7" result="t" />
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="cloudy" x="-20%" y="-40%" width="140%" height="180%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4" seed="11" result="t" />
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="26" xChannelSelector="R" yChannelSelector="G" result="d" />
+          <feGaussianBlur in="d" stdDeviation="1.4" />
+        </filter>
+      </defs>
+
+      <rect width="800" height="460" fill="url(#farmSky)" />
+
+      {/* clouds */}
+      <g filter="url(#cloudy)">
+        <g fill="#F1E9D1">
+          {[[120, 175, 46], [175, 140, 55], [240, 118, 62], [310, 140, 52], [370, 168, 44], [205, 188, 58], [290, 196, 56], [420, 196, 38], [80, 205, 40]].map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} />)}
+          {[[575, 92, 20], [605, 82, 26], [640, 90, 20], [560, 172, 24], [600, 160, 32], [645, 172, 24], [690, 178, 18]].map(([x, y, r], i) => <circle key={'b' + i} cx={x} cy={y} r={r} />)}
+        </g>
+        <g fill="#C7D3EA" opacity=".75">
+          <ellipse cx="250" cy="226" rx="185" ry="16" />
+          <ellipse cx="610" cy="192" rx="80" ry="9" />
+        </g>
+      </g>
+
+      {/* distant hills */}
+      <path filter="url(#wash)" d="M0 300C110 274 200 284 300 292C410 300 480 270 600 272C690 274 760 286 800 282V340H0Z" fill="#9CB0D9" />
+
+      {/* tree clumps */}
+      <g filter="url(#soft)">
+        <g fill="#5E8A44">{[[30, 296, 24], [70, 286, 30], [112, 292, 26], [150, 298, 22], [190, 302, 16], [272, 304, 14], [298, 300, 18], [612, 300, 18], [636, 294, 21], [740, 300, 16], [768, 296, 20]].map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} />)}</g>
+        <g fill="#7FA65A">{[[62, 280, 14], [104, 286, 12], [292, 294, 8], [630, 288, 10], [762, 290, 9]].map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} />)}</g>
+      </g>
+
+      {/* red barn */}
+      <g filter="url(#soft)">
+        <path d="M578 276H612V310H578Z" fill="#9A2E01" />
+        <path d="M576 276L590 268H616L612 276Z" fill="#AEB3BA" />
+        <path d="M520 274L530 257L549 249L568 257L578 274V310H520Z" fill="#BA3801" />
+        <path d="M514 276L528 254L549 243L570 254L584 276L578 278L567 258L549 249L531 258L520 278Z" fill="#BFC4CA" />
+        <rect x="538" y="285" width="22" height="25" fill="#F1E9D1" />
+        <path d="M540 287L558 308M558 287L540 308" stroke="#BA3801" strokeWidth="2.2" />
+        <rect x="545" y="263" width="8" height="8" fill="#F1E9D1" />
+      </g>
+
+      {/* fields */}
+      <g filter="url(#wash)">
+        <path d="M0 318C150 300 300 304 420 316C560 300 700 302 800 310V460H0Z" fill="#DDE9A8" />
+        <path d="M0 356C180 334 380 348 520 344C640 340 740 350 800 344V460H0Z" fill="#CBE08C" />
+        <path d="M0 398C200 378 420 394 800 384V460H0Z" fill="#B9D577" />
+      </g>
+      <g fill="#EEF3C4" opacity=".55">
+        <ellipse cx="180" cy="340" rx="120" ry="5" />
+        <ellipse cx="560" cy="330" rx="140" ry="4" />
+        <ellipse cx="380" cy="372" rx="160" ry="5" />
+      </g>
+
+      {/* wildflowers */}
+      <g fill="none" strokeWidth="2.2" strokeLinecap="round">
+        {MEADOW.blades.map((b, i) => <path key={i} d={b.d} stroke={b.c} />)}
+      </g>
+      {MEADOW.flowers.map((f, i) => (
+        <ellipse key={i} cx={f.x} cy={f.y} rx="3.6" ry="6" fill={f.c} transform={`rotate(${f.rot.toFixed(0)} ${f.x.toFixed(1)} ${f.y.toFixed(1)})`} />
+      ))}
+    </svg>
+  );
+}
+
+/* ───────────────────────── Martin the goose ───────────────────────── */
+function Goose({ mood, pulse }) {
+  const hop = useAnimationControls();
+  const wing = useAnimationControls();
+  const [honk, setHonk] = useState(false);
+  const sad = mood === 'starving';
+
+  useEffect(() => {
+    if (!pulse) return;
+    hop.start({ y: [0, -26, 0, -9, 0], transition: { duration: 0.8, ease: 'easeOut' } });
+    wing.start({ rotate: [0, -24, 6, -16, 0], transition: { duration: 0.8 } });
+  }, [pulse]);
+
+  useEffect(() => {
+    if (!honk) return;
+    const id = setTimeout(() => setHonk(false), 1100);
+    return () => clearTimeout(id);
+  }, [honk]);
+
+  const onClick = () => {
+    setHonk(true);
+    hop.start({ y: [0, -12, 0], transition: { duration: 0.35 } });
+    wing.start({ rotate: [0, -12, 0], transition: { duration: 0.35 } });
+  };
+
+  return (
+    <button type="button" onClick={onClick} aria-label="Martin the goose. Tap him to honk."
+      className="relative block mx-auto rounded-3xl">
+      <AnimatePresence>
+        {honk && (
+          <motion.span className="honk" initial={{ opacity: 0, scale: 0.4, rotate: -14 }}
+            animate={{ opacity: 1, scale: 1, rotate: -6 }} exit={{ opacity: 0, scale: 0.6, y: -8 }}>
+            HONK!
+          </motion.span>
+        )}
+      </AnimatePresence>
+      <motion.div animate={hop}>
+        <motion.div animate={{ y: [0, -3, 0] }} transition={{ duration: sad ? 3.6 : 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ filter: sad ? 'saturate(.45) brightness(.92)' : 'none' }}>
+          <svg viewBox="0 0 220 232" className="block w-[150px] sm:w-[176px] h-auto" style={{ overflow: 'visible' }} aria-hidden="true">
+            <defs>
+              <radialGradient id="gBody" cx="38%" cy="32%" r="78%">
+                <stop offset="0" stopColor="#FBF7EC" />
+                <stop offset=".55" stopColor="#F1E9D1" />
+                <stop offset="1" stopColor="#D2C2A0" />
+              </radialGradient>
+              <linearGradient id="gNeck" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="#FBF7EC" />
+                <stop offset="1" stopColor="#E6DABF" />
+              </linearGradient>
+            </defs>
+
+            <ellipse cx="118" cy="219" rx="60" ry="7" fill="rgba(47,90,42,.35)" />
+
+            <g stroke="#E8853A" strokeWidth="6" strokeLinecap="round">
+              <path d="M104 186 L102 209" /><path d="M127 184 L128 207" />
+            </g>
+            <path d="M103 206C96 208 88 212 82 217C91 219 101 218 111 216C109 211 107 208 103 206Z" fill="#E8853A" />
+            <path d="M128 204C121 206 113 210 108 215C117 217 127 216 136 214C134 209 132 206 128 204Z" fill="#EE9246" />
+
+            <path d="M64 138C62 112 84 98 112 100C140 102 162 118 198 121C190 133 185 142 177 150C173 177 147 194 115 194C84 194 66 168 64 138Z" fill="url(#gBody)" />
+
+            <motion.g animate={wing} style={{ originX: 0.15, originY: 0.25 }}>
+              <path d="M98 134C116 118 152 121 183 130C171 148 151 162 121 164C105 160 96 148 98 134Z" fill="#E6D8BA" />
+              <path d="M122 151C140 149 157 143 172 136M116 142C132 139 148 134 160 131" stroke="#D2C09D" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            </motion.g>
+
+            <motion.g style={{ originX: 0.72, originY: 0.96 }}
+              animate={{ rotate: sad ? [14, 17, 14] : [-3, 4, -3] }}
+              transition={{ duration: sad ? 4 : 3.2, repeat: Infinity, ease: 'easeInOut' }}>
+              <path d="M66 134C59 106 55 84 58 64C60 50 76 44 84 54C88 62 86 76 86 90C86 106 94 117 106 125Z" fill="url(#gNeck)" />
+              <circle cx="70" cy="50" r="18.5" fill="#F8F3E4" />
+              <path d="M54 43C46 43 36 46 29 50C33 56 44 58 56 55Z" fill="#EE8A3C" />
+              <path d="M31 51.5C39 53.5 47 53.5 55 51.5" stroke="#C4682A" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+              <ellipse cx="45" cy="46.5" rx="1.3" ry=".8" fill="#C4682A" />
+              <motion.ellipse cx="65" cy="44" rx="2.9" ry="3" fill="#1E2A4A"
+                style={{ originX: 0.5, originY: 0.5 }}
+                animate={{ scaleY: sad ? 0.45 : [1, 1, 0.1, 1] }}
+                transition={sad ? { duration: 0.3 } : { duration: 4.2, times: [0, 0.92, 0.96, 1], repeat: Infinity }} />
+              <circle cx="66" cy="43" r=".9" fill="#F1E9D1" />
+            </motion.g>
+          </svg>
+        </motion.div>
+      </motion.div>
+    </button>
+  );
+}
+
+/* ───────────────────────── Meters ───────────────────────── */
+function Meter({ label, value, kind, pulse, floats }) {
+  const controls = useAnimationControls();
+  const Icon = kind === 'water' ? Droplet : Strawberry;
+
+  useEffect(() => {
+    if (!pulse) return;
+    controls.start((i) => ({ y: [0, -6, 0], scale: [1, 1.15, 1], transition: { delay: i * 0.035, duration: 0.42 } }));
+  }, [pulse]);
+
+  return (
+    <div className="relative min-w-0">
+      <div className="flex items-baseline justify-between gap-2 text-butter">
+        <span className="font-display text-xl leading-none">{label}</span>
+        <span className="tabular text-sm">{Math.round(value)}%</span>
+      </div>
+      <div className="mt-2 rounded-xl bg-paper px-1.5 py-1.5 sm:px-2 shadow-inner">
+        <div className="grid grid-cols-10 gap-[3px] sm:gap-1" role="meter" aria-label={`${label} level`}
+          aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(value)}>
+          {Array.from({ length: 10 }).map((_, i) => {
+            const frac = clamp((value - i * 10) / 10, 0, 1);
+            return (
+              <motion.div key={i} custom={i} animate={controls} className="meter-cell relative">
+                <Icon empty />
+                <div className="absolute inset-0"
+                  style={{ clipPath: `inset(0 ${(1 - frac) * 100}% 0 0)`, transition: 'clip-path .7s cubic-bezier(.2,.8,.2,1)' }}>
+                  <Icon />
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+      <AnimatePresence>
+        {floats.map((f) => (
+          <motion.span key={f.id}
+            className="absolute right-0 -top-1 rounded-full bg-butter text-rust text-xs font-bold px-2 py-0.5 tabular shadow"
+            initial={{ opacity: 0, y: 6, scale: 0.6 }} animate={{ opacity: 1, y: -22, scale: 1 }}
+            exit={{ opacity: 0, y: -36 }} transition={{ duration: 0.5 }}>
+            +{f.amt}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function Dashboard({ water, food, drain, pulse, floats, today }) {
+  const mood = getMood(water, food);
+  const date = fromKey(today);
+  const dateLong = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const dateShort = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return (
+    <section className="relative overflow-hidden rounded-[28px] bg-rust p-1.5 shadow-[0_18px_40px_-18px_rgba(30,42,74,.75)]" aria-label="Martin the goose">
+      <div className="relative overflow-hidden rounded-[22px]">
+        <FarmScene />
+        <div className="relative px-5 sm:px-8 pt-4 pb-5">
+          <div className="flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.14em] text-ink/80">
+            <span className="whitespace-nowrap">Bailey &amp; Samuel's house</span>
+            <span className="text-right whitespace-nowrap"><span className="sm:hidden">{dateShort}</span><span className="hidden sm:inline">{dateLong}</span></span>
+          </div>
+          <div className="mt-3 text-center">
+            <h1 className="text-5xl sm:text-6xl leading-none text-rust">Martin</h1>
+            <p className="mt-1 text-sm text-ink/80">the household goose</p>
+          </div>
+          <div className="mt-2"><Goose mood={mood.key} pulse={pulse} /></div>
+          <AnimatePresence mode="wait">
+            <motion.p key={mood.key} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              className="mx-auto mt-2 w-fit max-w-md rounded-2xl bg-paper/90 px-4 py-2 text-center text-sm leading-relaxed text-ink shadow-sm" aria-live="polite">
+              {mood.text}
+            </motion.p>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-7 pt-4 pb-4">
+        <div className="grid grid-cols-2 gap-4 sm:gap-8">
+          <Meter label="Water" kind="water" value={water} pulse={pulse} floats={floats} />
+          <Meter label="Food" kind="food" value={food} pulse={pulse} floats={floats} />
+        </div>
+        <p className="mt-4 text-center text-xs text-butter tabular">
+          {drain.count === 0
+            ? 'Nothing is overdue, so Martin’s meters are holding steady.'
+            : `${drain.count} overdue ${drain.count === 1 ? 'chore is' : 'chores are'} draining ${drain.rate.toFixed(1)}% an hour from each meter.`}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* ───────────────────────── Small pieces ───────────────────────── */
+const DIFF_STYLE = {
+  // green → dark red as tasks get harder
+  'Light work': 'bg-[#3E7B3A] text-paper',
+  Easy: 'bg-[#93A93A] text-ink',
+  Medium: 'bg-[#E2A62E] text-ink',
+  Hard: 'bg-[#C7561C] text-paper',
+  Difficult: 'bg-[#7A1616] text-paper',
+};
+
+function DifficultyTag({ level }) {
+  const n = DIFFICULTIES.indexOf(level) + 1;
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold leading-none whitespace-nowrap ${DIFF_STYLE[level]}`}
+      title={`Difficulty ${n} of 5`}>
+      {level}
+      <span className="hidden sm:inline-flex gap-[2px]" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map((i) => <span key={i} className={`h-1 w-1 rounded-full bg-current ${i <= n ? '' : 'opacity-25'}`} />)}
+      </span>
+    </span>
+  );
+}
+
+const STAR_PATH = 'M12 2.6l2.75 5.95 6.5.72-4.86 4.4 1.36 6.4L12 16.8l-5.75 3.27 1.36-6.4-4.86-4.4 6.5-.72Z';
+
+function StarButton({ done, onToggle, label, size = 'md' }) {
+  const [burst, setBurst] = useState(null);
+  const click = () => {
+    if (!done) setBurst(Date.now());
+    onToggle();
+  };
+  useEffect(() => {
+    if (!burst) return;
+    const id = setTimeout(() => setBurst(null), 700);
+    return () => clearTimeout(id);
+  }, [burst]);
+  const box = size === 'sm' ? 'h-9 w-9' : 'h-11 w-11';
+  const icon = size === 'sm' ? 'h-6 w-6' : 'h-8 w-8';
+
+  return (
+    <button type="button" onClick={click} aria-pressed={done}
+      aria-label={done ? `Mark "${label}" as not done` : `Mark "${label}" as done`}
+      className={`relative grid ${box} shrink-0 place-items-center rounded-full hover:bg-cobalt/15 transition-colors`}>
+      <motion.svg viewBox="0 0 24 24" className={`star-svg ${icon}`} initial={false}
+        animate={done ? { scale: [1, 1.6, 0.85, 1.12, 1], rotate: [0, -20, 12, -4, 0] } : { scale: 1, rotate: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }} whileTap={{ scale: 0.85 }}>
+        <motion.path d={STAR_PATH} strokeWidth="2" strokeLinejoin="round" stroke="#A9820A" initial={false}
+          animate={{ fill: done ? '#FFEC89' : 'rgba(255,236,137,0)' }}
+          transition={{ duration: 0.25 }} />
+      </motion.svg>
+      <AnimatePresence>
+        {burst && Array.from({ length: 8 }).map((_, i) => {
+          const a = (i / 8) * Math.PI * 2;
+          return (
+            <motion.span key={`${burst}-${i}`} className="pointer-events-none absolute h-1.5 w-1.5 rounded-full"
+              style={{ background: i % 2 ? '#F4D242' : '#BA3801' }}
+              initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+              animate={{ x: Math.cos(a) * 26, y: Math.sin(a) * 26, opacity: 0, scale: 0.4 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.55, ease: 'easeOut' }} />
+          );
+        })}
+      </AnimatePresence>
+    </button>
+  );
+}
+
+function Segmented({ value, onChange, options, label }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-full bg-paper p-1 shadow-sm ring-1 ring-cobalt/20">
+      {options.map(([v, text]) => (
+        <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(v)}
+          className={`relative rounded-full px-3 py-1.5 text-xs sm:text-sm transition-colors ${value === v ? 'text-paper' : 'text-cobalt hover:bg-cobalt/15'}`}>
+          {value === v && <motion.span layoutId={`seg-${label}`} className="absolute inset-0 rounded-full bg-cobalt" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+          <span className="relative">{text}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AddButton({ onClick, label, tone = 'rust' }) {
+  return (
+    <motion.button type="button" onClick={onClick} aria-label={label} title={label}
+      whileHover={{ rotate: 90 }} whileTap={{ scale: 0.88 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+      className={`grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-md transition-colors ${tone === 'rust' ? 'bg-rust text-paper hover:bg-cobalt' : 'bg-paper text-cobalt hover:bg-[#2F4A8C] hover:text-paper'}`}>
+      <PlusIcon className="h-5 w-5" />
+    </motion.button>
+  );
+}
+
+function ConfirmRemove({ label, onConfirm }) {
+  const [asking, setAsking] = useState(false);
+  if (asking) {
+    return (
+      <span className="flex shrink-0 items-center gap-1 text-xs" role="group" aria-label={`Remove "${label}"?`}>
+        <button type="button" onClick={onConfirm} className="rounded-full bg-rust px-2.5 py-1 text-paper transition-colors hover:bg-cobalt">Remove</button>
+        <button type="button" onClick={() => setAsking(false)} className="rounded-full bg-paper px-2.5 py-1 text-cobalt ring-1 ring-cobalt/25 hover:bg-cobalt/10">Keep</button>
+      </span>
+    );
+  }
+  return (
+    <button type="button" onClick={() => setAsking(true)} aria-label={`Remove "${label}"`}
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink/40 hover:bg-cobalt hover:text-paper">
+      <XIcon />
+    </button>
+  );
+}
+
+function EmptyNote({ title, text }) {
+  return (
+    <div className="py-6 text-center">
+      <p className="font-display text-2xl text-cobalt">{title}</p>
+      {text && <p className="mt-1 text-sm text-ink/70">{text}</p>}
+    </div>
+  );
+}
+
+function ProgressBar({ pct, done, label }) {
+  return (
+    <div className="h-2.5 w-full overflow-hidden rounded-full bg-cobalt/10" role="progressbar"
+      aria-label={label} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(pct * 100)}>
+      <motion.div className={`h-full rounded-full ${done ? 'bg-moss' : 'bg-cobalt'}`} initial={false}
+        animate={{ width: `${Math.max(pct > 0 ? 4 : 0, Math.round(pct * 100))}%` }}
+        transition={{ type: 'spring', stiffness: 200, damping: 30 }} />
+    </div>
+  );
+}
+
+function Modal({ open, onClose, title, children }) {
+  const panel = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    const t = setTimeout(() => panel.current && panel.current.focus(), 60);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); clearTimeout(t); document.body.style.overflow = prev; };
+  }, [open]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <div className="absolute inset-0 bg-ink/45" onClick={onClose} />
+          <motion.div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title}
+            initial={{ y: 70, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 70, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+            className="modal-pad relative max-h-[88vh] w-full overflow-y-auto rounded-t-[26px] bg-paper shadow-2xl outline-none sm:max-w-[580px] sm:rounded-[26px]">
+            <div className="sticky top-0 z-10 -mx-1 flex items-center justify-between gap-3 bg-paper px-1 pb-2 pt-5">
+              <h2 className="text-3xl text-cobalt">{title}</h2>
+              <button type="button" onClick={onClose} aria-label="Close"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cobalt/10 text-cobalt hover:bg-cobalt/20">
+                <XIcon />
+              </button>
+            </div>
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function IdeaChip({ title, meta, added, onAdd }) {
+  return (
+    <motion.button type="button" onClick={onAdd} disabled={added} whileTap={added ? undefined : { scale: 0.94 }}
+      className={`flex items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm transition-colors ${added ? 'bg-sprout/60 text-moss cursor-default' : 'group bg-paper text-ink ring-1 ring-cobalt/25 hover:bg-cobalt hover:text-paper hover:ring-cobalt'}`}>
+      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${added ? 'bg-moss text-paper' : 'bg-rust text-paper group-hover:bg-paper group-hover:text-cobalt'}`}>
+        {added
+          ? <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" stroke="currentColor" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          : <PlusIcon className="h-3 w-3" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block leading-snug">{title}</span>
+        {(meta || added) && <span className={`block text-[11px] ${added ? 'text-ink/60' : 'text-ink/60 group-hover:text-paper/85'}`}>{added ? 'Added' : meta}</span>}
+      </span>
+    </motion.button>
+  );
+}
+
+const fieldClass = 'mt-1 w-full rounded-xl border border-cobalt/30 bg-paper px-3 py-2.5 text-sm text-ink placeholder:text-ink/45 focus:border-cobalt focus:outline-none';
+
+/* ───────────────────────── Expandable card ─────────────────────────
+   Collapsed: a short peek. Tap anywhere on the card (or the arrow) to open the full section. */
+function Chevron({ open }) {
+  return (
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cobalt/10 text-cobalt transition-colors group-hover:bg-cobalt group-hover:text-paper" aria-hidden="true">
+      <motion.svg viewBox="0 0 20 20" className="h-4 w-4" initial={false} animate={{ rotate: open ? 180 : 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 26 }}>
+        <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </motion.svg>
+    </span>
+  );
+}
+
+function ExpandCard({ id, kicker, title, summary, open, onToggle, onAdd, addLabel, moreLabel, peek, full }) {
+  const onSurface = (e) => {
+    if (open) return;
+    if (e.target.closest('button, a, input, select, textarea, label, form')) return;
+    onToggle();
+  };
+  return (
+    <section className="sheet-wrap" aria-labelledby={`${id}-heading`}>
+      <div className={`sheet px-4 sm:px-6 pb-4 ${open ? '' : 'cursor-pointer'}`} onClick={onSurface}>
+        <div className="flex items-center gap-3">
+          <h2 id={`${id}-heading`} className="min-w-0 flex-1">
+            <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={`${id}-body`}
+              className="group flex w-full items-center gap-3 rounded-2xl text-left">
+              <span className="min-w-0 flex-1">
+                <span className="block font-body not-italic text-[11px] uppercase tracking-[0.14em] text-rust">{kicker}</span>
+                <span className="block text-3xl sm:text-[2.15rem] leading-tight text-cobalt">{title}</span>
+                <span className="mt-0.5 block font-body not-italic text-sm text-ink/70 tabular">{summary}</span>
+              </span>
+              <Chevron open={open} />
+            </button>
+          </h2>
+          {onAdd && <AddButton onClick={onAdd} label={addLabel} />}
+        </div>
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={open ? 'full' : 'peek'} id={`${id}-body`}
+            initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+            animate={{ opacity: 1, height: 'auto', transitionEnd: { overflow: 'visible' } }}
+            exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+            transition={{ duration: 0.24, ease: [0.2, 0.8, 0.2, 1] }}>
+            <div className="pt-3">{open ? full : peek}</div>
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="mt-3 flex justify-center">
+          <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={`${id}-body`}
+            className="inline-flex items-center gap-1.5 rounded-full bg-paper px-4 py-2 text-sm text-cobalt ring-1 ring-cobalt/25 transition-colors hover:bg-cobalt hover:text-paper">
+            {open ? 'Show less' : moreLabel}
+            <svg viewBox="0 0 20 20" className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
+              <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ───────────────────────── Add a shared chore ───────────────────────── */
+function AddChoreSheet({ open, onClose, tasks, today, onAdd }) {
+  const [room, setRoom] = useState('Kitchen');
+  const [title, setTitle] = useState('');
+  const [freq, setFreq] = useState('weekly');
+  const [difficulty, setDifficulty] = useState('Easy');
+  const [due, setDue] = useState(today);
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+
+  useEffect(() => { if (open) { setNote(''); setError(''); setDue(today); } }, [open]);
+
+  const exists = (name) => tasks.some((t) => t.room === room && same(t.title, name));
+  const roomIdeas = QUICK_CHORES[room] || [];
+  const anyIdeas = ANY_ROOM_IDEAS.filter(([n]) => !roomIdeas.some(([m]) => same(m, n)));
+
+  const quickAdd = ([name, f, d]) => {
+    onAdd({ room, title: name, freq: f, difficulty: d, due: today });
+    setNote(`Added "${name}" to ${room}.`);
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) { setError('Give the chore a name first.'); return; }
+    if (exists(title)) { setError(`${room} already has that chore.`); return; }
+    onAdd({ room, title: title.trim(), freq, difficulty, due: due || today });
+    setTitle(''); setError('');
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Add a teamwork chore">
+      <label htmlFor="add-room" className="block text-sm text-cobalt">Which room?</label>
+      <select id="add-room" value={room} onChange={(e) => { setRoom(e.target.value); setError(''); }} className={fieldClass}>
+        {ROOMS.map((r) => <option key={r}>{r}</option>)}
+      </select>
+
+      <h3 className="mt-5 text-2xl text-rust">Quick add for the {room === 'Around the house' ? 'whole house' : room}</h3>
+      <p className="text-xs text-ink/65">Tap one to add it, due today.</p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {roomIdeas.map((idea) => (
+          <IdeaChip key={idea[0]} title={idea[0]} meta={`${FREQ_LABEL[idea[1]]} · ${idea[2]}`} added={exists(idea[0])} onAdd={() => quickAdd(idea)} />
+        ))}
+      </div>
+
+      <h3 className="mt-5 text-2xl text-rust">Good for any room</h3>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {anyIdeas.map((idea) => (
+          <IdeaChip key={idea[0]} title={idea[0]} meta={`${FREQ_LABEL[idea[1]]} · ${idea[2]}`} added={exists(idea[0])} onAdd={() => quickAdd(idea)} />
+        ))}
+      </div>
+      <p className="mt-2 min-h-[1.25rem] text-xs text-moss" aria-live="polite">{note}</p>
+
+      <form onSubmit={submit} className="mt-3 rounded-2xl bg-cobalt/[.07] p-4">
+        <h3 className="text-2xl text-cobalt">Or write your own</h3>
+        <label htmlFor="custom-chore-name" className="mt-2 block text-xs text-ink/70">Chore</label>
+        <input id="custom-chore-name" value={title} onChange={(e) => { setTitle(e.target.value); setError(''); }}
+          placeholder="e.g. Wipe down the patio table" className={fieldClass} />
+        {error && <p className="mt-1 text-xs text-cherry" role="alert">{error}</p>}
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="min-w-0">
+            <label htmlFor="custom-chore-freq" className="block text-xs text-ink/70">How often</label>
+            <select id="custom-chore-freq" value={freq} onChange={(e) => setFreq(e.target.value)} className={fieldClass}>
+              {Object.keys(FREQ_LABEL).map((f) => <option key={f} value={f}>{FREQ_LABEL[f]}</option>)}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="custom-chore-diff" className="block text-xs text-ink/70">Difficulty</label>
+            <select id="custom-chore-diff" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={fieldClass}>
+              {DIFFICULTIES.map((d) => <option key={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="custom-chore-due" className="block text-xs text-ink/70">First due</label>
+            <input id="custom-chore-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className={fieldClass} />
+          </div>
+        </div>
+        <motion.button type="submit" whileTap={{ scale: 0.96 }}
+          className="mt-4 w-full rounded-xl bg-rust px-5 py-3 text-sm font-bold text-paper transition-colors hover:bg-cobalt sm:w-auto">
+          Add chore to {room}
+        </motion.button>
+      </form>
+    </Modal>
+  );
+}
+
+/* ───────────────────────── Add a personal task ───────────────────────── */
+function AddPersonalSheet({ open, onClose, person, items, today, onAdd }) {
+  const [title, setTitle] = useState('');
+  const [difficulty, setDifficulty] = useState('Easy');
+  const [due, setDue] = useState(today);
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+  const slug = person.toLowerCase();
+
+  useEffect(() => { if (open) { setNote(''); setError(''); setDue(today); setTitle(''); } }, [open, person]);
+
+  const has = (name) => items.some((p) => !p.done && same(p.title, name));
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) { setError('Give the task a name first.'); return; }
+    onAdd(person, { title: title.trim(), difficulty, due: due || null });
+    setTitle(''); setError('');
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={`Add to ${person}'s list`}>
+      <form onSubmit={submit}>
+        <label htmlFor={`new-${slug}`} className="block text-sm text-cobalt">Task</label>
+        <input id={`new-${slug}`} value={title} onChange={(e) => { setTitle(e.target.value); setError(''); }}
+          placeholder="e.g. Pick up dry cleaning" className={fieldClass} />
+        {error && <p className="mt-1 text-xs text-cherry" role="alert">{error}</p>}
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="min-w-0">
+            <label htmlFor={`diff-${slug}`} className="block text-xs text-ink/70">Difficulty</label>
+            <select id={`diff-${slug}`} value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={fieldClass}>
+              {DIFFICULTIES.map((d) => <option key={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor={`due-${slug}`} className="block text-xs text-ink/70">Due</label>
+            <input id={`due-${slug}`} type="date" value={due} onChange={(e) => setDue(e.target.value)} className={fieldClass} />
+          </div>
+        </div>
+        <motion.button type="submit" whileTap={{ scale: 0.96 }}
+          className="mt-4 w-full rounded-xl bg-rust px-5 py-3 text-sm font-bold text-paper transition-colors hover:bg-cobalt sm:w-auto">
+          Add task
+        </motion.button>
+      </form>
+
+      <h3 className="mt-6 text-2xl text-rust">Quick ideas</h3>
+      <p className="text-xs text-ink/65">Tap one to add it, due today.</p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {PERSONAL_IDEAS.map(([name, d]) => (
+          <IdeaChip key={name} title={name} meta={d} added={has(name)}
+            onAdd={() => { onAdd(person, { title: name, difficulty: d, due: today }); setNote(`Added "${name}" to ${person}'s list.`); }} />
+        ))}
+      </div>
+      <p className="mt-2 min-h-[1.25rem] text-xs text-moss" aria-live="polite">{note}</p>
+    </Modal>
+  );
+}
+
+/* ───────────────────────── Add a goal ───────────────────────── */
+function AddGoalSheet({ open, onClose, owner, goals, today, onAdd }) {
+  const [title, setTitle] = useState('');
+  const [due, setDue] = useState('');
+  const [steps, setSteps] = useState('');
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+  const slug = owner.toLowerCase();
+  const ideas = owner === 'team' ? GOAL_IDEAS.team : GOAL_IDEAS.personal;
+
+  useEffect(() => { if (open) { setTitle(''); setDue(''); setSteps(''); setError(''); setNote(''); } }, [open]);
+
+  const has = (name) => goals.some((g) => same(g.title, name));
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) { setError('Give the goal a name first.'); return; }
+    const list = steps.split('\n').map((x) => x.trim()).filter(Boolean);
+    onAdd(owner, { title: title.trim(), due: due || null, steps: list.length ? list : [title.trim()] });
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={owner === 'team' ? 'Add a shared goal' : `Add a goal for ${owner}`}>
+      <form onSubmit={submit}>
+        <label htmlFor={`goal-${slug}`} className="block text-sm text-cobalt">Goal</label>
+        <input id={`goal-${slug}`} value={title} onChange={(e) => { setTitle(e.target.value); setError(''); }}
+          placeholder="e.g. Repaint the front door" className={fieldClass} />
+        {error && <p className="mt-1 text-xs text-cherry" role="alert">{error}</p>}
+        <label htmlFor={`goal-due-${slug}`} className="mt-3 block text-xs text-ink/70">Target date (optional)</label>
+        <input id={`goal-due-${slug}`} type="date" value={due} min={today} onChange={(e) => setDue(e.target.value)} className={fieldClass} />
+        <label htmlFor={`goal-steps-${slug}`} className="mt-3 block text-xs text-ink/70">Steps, one per line</label>
+        <textarea id={`goal-steps-${slug}`} rows={4} value={steps} onChange={(e) => setSteps(e.target.value)}
+          placeholder={'Pick a color\nBuy paint & tape\nPaint two coats'} className={fieldClass} />
+        <motion.button type="submit" whileTap={{ scale: 0.96 }}
+          className="mt-4 w-full rounded-xl bg-rust px-5 py-3 text-sm font-bold text-paper transition-colors hover:bg-cobalt sm:w-auto">
+          Add goal
+        </motion.button>
+      </form>
+
+      <h3 className="mt-6 text-2xl text-rust">Quick ideas</h3>
+      <p className="text-xs text-ink/65">Tap one to add it with its steps.</p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {ideas.map(([name, list]) => (
+          <IdeaChip key={name} title={name} meta={plural(list.length, 'step', 'steps')} added={has(name)}
+            onAdd={() => { onAdd(owner, { title: name, due: null, steps: list }); setNote(`Added "${name}".`); }} />
+        ))}
+      </div>
+      <p className="mt-2 min-h-[1.25rem] text-xs text-moss" aria-live="polite">{note}</p>
+    </Modal>
+  );
+}
+
+/* ───────────────────────── Add a habit ───────────────────────── */
+function AddHabitSheet({ open, onClose, owner, habits, onAdd }) {
+  const [title, setTitle] = useState('');
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+  const slug = owner.toLowerCase();
+  const ideas = owner === 'team' ? HABIT_IDEAS.team : HABIT_IDEAS.personal;
+
+  useEffect(() => { if (open) { setTitle(''); setError(''); setNote(''); } }, [open]);
+
+  const has = (name) => habits.some((h) => same(h.title, name));
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) { setError('Give the habit a name first.'); return; }
+    if (has(title)) { setError('That habit is already on the tracker.'); return; }
+    onAdd(owner, title.trim());
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title={owner === 'team' ? 'Add a shared habit' : `Add a habit for ${owner}`}>
+      <form onSubmit={submit}>
+        <label htmlFor={`habit-${slug}`} className="block text-sm text-cobalt">Habit</label>
+        <input id={`habit-${slug}`} value={title} onChange={(e) => { setTitle(e.target.value); setError(''); }}
+          placeholder="e.g. Fold laundry the same day" className={fieldClass} />
+        {error && <p className="mt-1 text-xs text-cherry" role="alert">{error}</p>}
+        <motion.button type="submit" whileTap={{ scale: 0.96 }}
+          className="mt-4 w-full rounded-xl bg-rust px-5 py-3 text-sm font-bold text-paper transition-colors hover:bg-cobalt sm:w-auto">
+          Add habit
+        </motion.button>
+      </form>
+
+      <h3 className="mt-6 text-2xl text-rust">Quick ideas</h3>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {ideas.map((name) => (
+          <IdeaChip key={name} title={name} added={has(name)}
+            onAdd={() => { onAdd(owner, name); setNote(`Added "${name}".`); }} />
+        ))}
+      </div>
+      <p className="mt-2 min-h-[1.25rem] text-xs text-moss" aria-live="polite">{note}</p>
+    </Modal>
+  );
+}
+
+/* ───────────────────────── To-do: shared chores ───────────────────────── */
+function TeamRow({ t, today, onToggle, onDelete, showRoom }) {
+  const done = isDone(t, today);
+  const d = diffDays(t.due, today);
+  let dueText, dueClass;
+  if (done) { dueText = `Done${t.doneBy ? ` by ${t.doneBy}` : ''} · next ${shortDate(t.due, today)}`; dueClass = 'text-moss'; }
+  else if (d < 0) { dueText = `Overdue by ${-d} day${d < -1 ? 's' : ''}`; dueClass = 'text-rust font-bold'; }
+  else if (d === 0) { dueText = 'Due today'; dueClass = 'text-cobalt font-bold'; }
+  else { dueText = `Due ${shortDate(t.due, today)}`; dueClass = 'text-ink/70'; }
+
+  return (
+    <motion.li layout initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
+      transition={{ layout: { type: 'spring', stiffness: 380, damping: 34 } }}
+      className="flex items-center gap-2 sm:gap-3 border-b border-dashed border-[var(--rule)] py-1.5 last:border-0">
+      <StarButton done={done} label={t.title} onToggle={() => onToggle(t.id)} />
+      <div className="min-w-0 flex-1">
+        <p className={`leading-snug break-words transition-colors ${done ? 'line-through decoration-cobalt/50 text-ink/50' : 'text-ink'}`}>{t.title}</p>
+        <p className="mt-0.5 flex flex-wrap gap-x-2 text-xs">
+          <span className="text-ink/60">{showRoom ? t.room : FREQ_LABEL[t.freq]}</span>
+          <span className="text-ink/30" aria-hidden="true">·</span>
+          <span className={dueClass}>{dueText}</span>
+        </p>
+      </div>
+      <DifficultyTag level={t.difficulty} />
+      {t.custom && onDelete && (
+        <button type="button" onClick={() => onDelete(t.id)} aria-label={`Remove "${t.title}"`}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink/40 hover:bg-cobalt hover:text-paper">
+          <XIcon />
+        </button>
+      )}
+    </motion.li>
+  );
+}
+
+function TeamTodoPeek({ tasks, today, onToggle }) {
+  const next = tasks.filter((t) => !isDone(t, today)).sort(byDue).slice(0, 3);
+  if (!next.length) return <EmptyNote title="All caught up." text="Martin is giving you both a proud honk." />;
+  return (
+    <ul>
+      <AnimatePresence initial={false}>
+        {next.map((t) => <TeamRow key={t.id} t={t} today={today} onToggle={onToggle} showRoom />)}
+      </AnimatePresence>
+    </ul>
+  );
+}
+
+function TeamTodoFull({ tasks, today, view, setView, onToggle, onDelete }) {
+  const end = weekEnd(today);
+  const start = weekStart(today);
+
+  const visible = tasks.filter((t) => {
+    const done = isDone(t, today);
+    if (view === 'all') return true;
+    if (view === 'today') return done ? t.lastDone === today : t.due <= today;
+    return done ? t.lastDone >= start : t.due <= end;
+  });
+  const later = tasks.filter((t) => !isDone(t, today) && t.due > end).length;
+
+  const sortKey = (t) => (isDone(t, today) ? '2' : '1') + t.due;
+  const groups = ROOMS.map((room) => ({
+    room,
+    items: visible.filter((t) => t.room === room).sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : 1)),
+  })).filter((g) => g.items.length);
+
+  return (
+    <div>
+      <Segmented label="Show" value={view} onChange={setView}
+        options={[['today', 'Today'], ['week', 'This week'], ['all', 'Every chore']]} />
+      {groups.length === 0 ? (
+        <EmptyNote title="All caught up." text="Martin is giving you both a proud honk." />
+      ) : (
+        <div className="mt-4 flex flex-col gap-5">
+          {groups.map(({ room, items }) => {
+            const roomDone = items.filter((t) => isDone(t, today)).length;
+            return (
+              <section key={room} aria-label={room}>
+                <div className="flex items-baseline justify-between gap-3 border-b-2 border-rust/20 pb-1">
+                  <h3 className="text-xl sm:text-2xl text-rust">{room}</h3>
+                  <span className="text-xs text-ink/60 tabular">{roomDone} of {items.length} done</span>
+                </div>
+                <ul>
+                  <AnimatePresence initial={false}>
+                    {items.map((t) => <TeamRow key={t.id} t={t} today={today} onToggle={onToggle} onDelete={onDelete} />)}
+                  </AnimatePresence>
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      )}
+      {view !== 'all' && later > 0 && (
+        <p className="mt-5 text-center text-xs text-ink/60">
+          {later} more {later === 1 ? 'chore isn’t' : 'chores aren’t'} due until next week.{' '}
+          <button type="button" className="underline decoration-dotted underline-offset-2 text-cobalt" onClick={() => setView('all')}>Show every chore</button>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ───────────────────────── To-do: personal lists ───────────────────────── */
+function PersonalRow({ p, person, today, onToggle, onDelete }) {
+  const d = p.due ? diffDays(p.due, today) : null;
+  let meta, metaClass = 'text-ink/65';
+  if (p.done) { meta = `Done ${p.doneOn === today ? 'today' : shortDate(p.doneOn, today)}`; metaClass = 'text-moss'; }
+  else if (d === null) meta = 'No due date';
+  else if (d < 0) { meta = `Overdue by ${-d} day${d < -1 ? 's' : ''}`; metaClass = 'text-rust font-bold'; }
+  else if (d === 0) { meta = 'Due today'; metaClass = 'text-cobalt font-bold'; }
+  else meta = `Due ${shortDate(p.due, today)}`;
+  return (
+    <motion.li layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 30 }} transition={{ layout: { type: 'spring', stiffness: 380, damping: 34 } }}
+      className="flex items-center gap-2 sm:gap-3 border-b border-dashed border-[var(--rule)] py-1.5 last:border-0">
+      <StarButton done={p.done} label={p.title} onToggle={() => onToggle(person, p.id)} />
+      <div className="min-w-0 flex-1">
+        <p className={`leading-snug break-words ${p.done ? 'line-through decoration-cobalt/50 text-ink/50' : 'text-ink'}`}>{p.title}</p>
+        <p className={`mt-0.5 text-xs ${metaClass}`}>{meta}</p>
+      </div>
+      <DifficultyTag level={p.difficulty} />
+      {onDelete && (
+        <button type="button" onClick={() => onDelete(person, p.id)} aria-label={`Delete "${p.title}"`}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink/40 hover:bg-cobalt hover:text-paper">
+          <XIcon />
+        </button>
+      )}
+    </motion.li>
+  );
+}
+
+const sortPersonal = (items) => [...items].sort((a, b) => {
+  if (a.done !== b.done) return a.done ? 1 : -1;
+  return (a.due || '9999') < (b.due || '9999') ? -1 : 1;
+});
+
+function PersonalTodoPeek({ person, items, today, onToggle }) {
+  const next = sortPersonal(items.filter((p) => !p.done)).slice(0, 3);
+  if (!next.length) return <EmptyNote title={`Nothing on ${person}'s list.`} text="Tap the plus to add a task." />;
+  return (
+    <ul>
+      <AnimatePresence initial={false}>
+        {next.map((p) => <PersonalRow key={p.id} p={p} person={person} today={today} onToggle={onToggle} />)}
+      </AnimatePresence>
+    </ul>
+  );
+}
+
+function PersonalTodoFull({ person, items, today, onToggle, onDelete, onClear }) {
+  const sorted = sortPersonal(items);
+  const finished = items.filter((p) => p.done).length;
+  return (
+    <div>
+      {sorted.length === 0 ? (
+        <EmptyNote title={`Nothing on ${person}'s list.`} text="Tap the plus to add a task." />
+      ) : (
+        <ul>
+          <AnimatePresence initial={false}>
+            {sorted.map((p) => <PersonalRow key={p.id} p={p} person={person} today={today} onToggle={onToggle} onDelete={onDelete} />)}
+          </AnimatePresence>
+        </ul>
+      )}
+      {finished > 0 && (
+        <div className="mt-3 text-center">
+          <button type="button" onClick={() => onClear(person)} className="text-xs text-cobalt underline decoration-dotted underline-offset-2">
+            Clear {plural(finished, 'finished task', 'finished tasks')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────────────────────── Goals ───────────────────────── */
+function GoalPeekRow({ g, today }) {
+  const { done, total, pct } = goalProgress(g);
+  const reached = isGoalDone(g);
+  const due = goalDue(g, today);
+  return (
+    <li className="border-b border-dashed border-[var(--rule)] py-2.5 last:border-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className={`min-w-0 leading-snug break-words ${reached ? 'text-moss' : 'text-ink'}`}>{g.title}</p>
+        <span className="shrink-0 text-xs tabular text-ink/65">{done} of {total}</span>
+      </div>
+      <div className="mt-1.5"><ProgressBar pct={pct} done={reached} label={`${g.title} progress`} /></div>
+      <p className={`mt-1 text-xs ${due.cls}`}>{due.text}</p>
+    </li>
+  );
+}
+
+function GoalsPeek({ goals, today, emptyText }) {
+  const top = sortGoals(goals).slice(0, 3);
+  if (!top.length) return <EmptyNote title="No goals yet." text={emptyText} />;
+  return <ul>{top.map((g) => <GoalPeekRow key={g.id} g={g} today={today} />)}</ul>;
+}
+
+function GoalBlock({ g, today, onToggleStep, onAddStep, onDeleteStep, onDeleteGoal }) {
+  const [step, setStep] = useState('');
+  const { done, total, pct } = goalProgress(g);
+  const reached = isGoalDone(g);
+  const due = goalDue(g, today);
+  const submit = (e) => {
+    e.preventDefault();
+    if (!step.trim()) return;
+    onAddStep(g.id, step.trim());
+    setStep('');
+  };
+  return (
+    <motion.li layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
+      transition={{ layout: { type: 'spring', stiffness: 380, damping: 34 } }}
+      className={`rounded-2xl p-3 sm:p-4 ring-1 ${reached ? 'bg-sprout/35 ring-moss/25' : 'bg-cobalt/[.05] ring-cobalt/15'}`}>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-2xl leading-tight text-rust break-words">{g.title}</h3>
+          <p className="mt-0.5 flex flex-wrap gap-x-2 text-xs">
+            <span className={due.cls}>{due.text}</span>
+            <span className="text-ink/30" aria-hidden="true">·</span>
+            <span className="text-ink/65 tabular">{done} of {plural(total, 'step', 'steps')}</span>
+          </p>
+        </div>
+        {reached && <span className="shrink-0 rounded-full bg-moss px-2.5 py-1 text-[11px] font-bold leading-none text-paper">Reached!</span>}
+        <ConfirmRemove label={g.title} onConfirm={() => onDeleteGoal(g.id)} />
+      </div>
+      <div className="mt-2"><ProgressBar pct={pct} done={reached} label={`${g.title} progress`} /></div>
+      <ul className="mt-1.5">
+        <AnimatePresence initial={false}>
+          {g.steps.map((s) => (
+            <motion.li key={s.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0 }}
+              className="group/step flex items-center gap-1.5">
+              <StarButton size="sm" done={s.done} label={s.title} onToggle={() => onToggleStep(g.id, s.id)} />
+              <span className={`min-w-0 flex-1 text-sm leading-snug break-words ${s.done ? 'line-through decoration-cobalt/50 text-ink/50' : 'text-ink'}`}>{s.title}</span>
+              <button type="button" onClick={() => onDeleteStep(g.id, s.id)} aria-label={`Remove step "${s.title}"`}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink/30 hover:bg-cobalt hover:text-paper sm:opacity-0 sm:group-hover/step:opacity-100 sm:focus:opacity-100">
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
+      <form onSubmit={submit} className="mt-2 flex gap-2">
+        <input value={step} onChange={(e) => setStep(e.target.value)} aria-label={`Add a step to "${g.title}"`}
+          placeholder="Add a step" className="min-w-0 flex-1 rounded-xl border border-cobalt/25 bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink/45 focus:border-cobalt focus:outline-none" />
+        <button type="submit" className="shrink-0 rounded-xl bg-cobalt px-3.5 py-2 text-sm text-paper transition-colors hover:bg-rust">Add</button>
+      </form>
+    </motion.li>
+  );
+}
+
+function GoalsFull({ goals, today, emptyText, ...actions }) {
+  const sorted = sortGoals(goals);
+  if (!sorted.length) return <EmptyNote title="No goals yet." text={emptyText} />;
+  return (
+    <ul className="flex flex-col gap-3">
+      <AnimatePresence initial={false}>
+        {sorted.map((g) => <GoalBlock key={g.id} g={g} today={today} {...actions} />)}
+      </AnimatePresence>
+    </ul>
+  );
+}
+
+/* ───────────────────────── Habit tracker ───────────────────────── */
+function HabitBox({ checked, disabled, isToday, label, onToggle, day }) {
+  return (
+    <motion.button type="button" disabled={disabled} onClick={onToggle} aria-pressed={checked} aria-label={label}
+      whileTap={disabled ? undefined : { scale: 0.85 }}
+      className={`relative grid aspect-square w-full place-items-center rounded-lg text-[10px] leading-none tabular transition-colors
+        ${checked ? 'bg-cobalt text-paper shadow-sm' : disabled ? 'bg-paper/70 text-ink/25 ring-1 ring-cobalt/10 cursor-default' : 'bg-paper text-ink/45 ring-1 ring-cobalt/30 hover:bg-cobalt/15'}
+        ${isToday ? 'habit-today' : ''}`}>
+      {checked ? (
+        <motion.svg viewBox="0 0 20 20" className="h-[62%] w-[62%]" initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 22 }} aria-hidden="true">
+          <path d="M4.5 10.5l3.5 3.5 7.5-8" stroke="#FFEC89" strokeWidth="2.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </motion.svg>
+      ) : day}
+    </motion.button>
+  );
+}
+
+function habitStatsText(h, today, ym) {
+  const streak = habitStreak(h, today);
+  const count = habitMonthCount(h, ym);
+  const parts = [`${count} ${count === 1 ? 'day' : 'days'} in ${monthName(ym)}`];
+  if (streak > 1) parts.push(`${streak}-day streak`);
+  return parts.join(' · ');
+}
+
+// Peek: just this week's row of boxes for up to three habits
+function HabitsPeek({ habits, today, onToggle }) {
+  if (!habits.length) return <EmptyNote title="No habits yet." text="Tap the plus to start tracking one." />;
+  const start = weekStart(today);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  const shown = habits.slice(0, 3);
+  const grid = 'grid w-full grid-cols-7 gap-1.5 sm:w-[300px] sm:shrink-0';
+  return (
+    <div>
+      <div className="flex items-end gap-3">
+        <p className="hidden flex-1 text-xs text-ink/60 sm:block">This week</p>
+        <div className={`${grid} text-center`}>
+          {days.map((k, i) => (
+            <span key={k} className={`text-[11px] leading-tight tabular ${k === today ? 'font-bold text-rust' : 'text-ink/60'}`}>
+              {WEEKDAY_LETTERS[i]}<br />{fromKey(k).getDate()}
+            </span>
+          ))}
+        </div>
+      </div>
+      <ul className="mt-1">
+        {shown.map((h) => (
+          <li key={h.id} className="flex flex-col gap-1.5 border-b border-dashed border-[var(--rule)] py-2.5 last:border-0 sm:flex-row sm:items-center sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="leading-snug break-words text-ink">{h.title}</p>
+              <p className="text-xs text-ink/60 tabular">{habitStatsText(h, today, monthOf(today))}</p>
+            </div>
+            <div className={grid}>
+              {days.map((k) => (
+                <HabitBox key={k} checked={!!h.checks[k]} disabled={k > today} isToday={k === today}
+                  label={`${h.title}, ${longDay(k)}`} onToggle={() => onToggle(h.id, k)} />
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {habits.length > 3 && <p className="mt-1 text-center text-xs text-ink/60">+ {plural(habits.length - 3, 'more habit', 'more habits')}</p>}
+    </div>
+  );
+}
+
+// Full: every day of the month, one little calendar per habit
+function HabitsFull({ habits, today, onToggle, onDelete }) {
+  const [ym, setYm] = useState(monthOf(today));
+  const keys = monthKeys(ym);
+  const lead = mondayIndex(keys[0]);
+  const isCurrent = ym >= monthOf(today);
+  const navBtn = 'grid h-10 w-10 place-items-center rounded-full bg-cobalt/10 text-cobalt transition-colors hover:bg-cobalt hover:text-paper disabled:opacity-30 disabled:hover:bg-cobalt/10 disabled:hover:text-cobalt';
+
+  if (!habits.length) return <EmptyNote title="No habits yet." text="Tap the plus to start tracking one." />;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" className={navBtn} onClick={() => setYm(shiftMonth(ym, -1))} aria-label="Previous month">
+          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true"><path d="M12.5 5l-5 5 5 5" stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
+        <p className="font-display text-2xl text-rust" aria-live="polite">{monthLabel(ym)}</p>
+        <button type="button" className={navBtn} onClick={() => setYm(shiftMonth(ym, 1))} disabled={isCurrent} aria-label="Next month">
+          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true"><path d="M7.5 5l5 5-5 5" stroke="currentColor" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
+      </div>
+      {!isCurrent && (
+        <p className="mt-1 text-center text-xs">
+          <button type="button" className="text-cobalt underline decoration-dotted underline-offset-2" onClick={() => setYm(monthOf(today))}>Back to this month</button>
+        </p>
+      )}
+      <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <AnimatePresence initial={false}>
+          {habits.map((h) => (
+            <motion.li key={h.id} layout initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="rounded-2xl bg-cobalt/[.05] p-3 ring-1 ring-cobalt/15">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xl leading-tight text-cobalt break-words">{h.title}</h3>
+                  <p className="mt-0.5 text-xs text-ink/60 tabular">{habitStatsText(h, today, ym)}</p>
+                </div>
+                <ConfirmRemove label={h.title} onConfirm={() => onDelete(h.id)} />
+              </div>
+              <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[10px] text-ink/50" aria-hidden="true">
+                {WEEKDAY_LETTERS.map((l, i) => <span key={i}>{l}</span>)}
+              </div>
+              <div className="mt-1 grid grid-cols-7 gap-1">
+                {Array.from({ length: lead }).map((_, i) => <span key={'blank' + i} />)}
+                {keys.map((k) => (
+                  <HabitBox key={k} day={Number(k.slice(8))} checked={!!h.checks[k]} disabled={k > today} isToday={k === today}
+                    label={`${h.title}, ${longDay(k)}`} onToggle={() => onToggle(h.id, k)} />
+                ))}
+              </div>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
+    </div>
+  );
+}
+
+/* ───────────────────────── A page: to-do + goals + habits ───────────────────────── */
+function PageBand({ team, title, text }) {
+  return (
+    <div className={`rounded-[22px] px-5 sm:px-7 py-5 shadow-[0_14px_30px_-18px_rgba(30,42,74,.85)] ${team ? 'bg-rust text-butter' : 'bg-cobalt text-paper'}`}>
+      <h2 className="text-3xl sm:text-4xl">{title}</h2>
+      <p className={`mt-1 text-sm ${team ? 'text-paper' : 'text-paper/90'}`}>{text}</p>
+    </div>
+  );
+}
+
+function Board({ owner, state, today, view, setView, isOpen, flip, setAdding, act }) {
+  const team = owner === 'team';
+  const slug = owner.toLowerCase();
+  const goals = state.goals[owner] || [];
+  const habits = state.habits[owner] || [];
+  const ym = monthOf(today);
+
+  // To-do summary
+  let todo;
+  if (team) {
+    const open = state.tasks.filter((t) => !isDone(t, today));
+    const overdue = open.filter((t) => t.due < today).length;
+    const dueToday = open.filter((t) => t.due === today).length;
+    const doneCount = state.tasks.length - open.length;
+    todo = {
+      summary: [overdue ? `${overdue} overdue` : null, `${dueToday} due today`, `${doneCount} done`].filter(Boolean).join(' · '),
+      more: `See all ${state.tasks.length} chores`,
+      peek: <TeamTodoPeek tasks={state.tasks} today={today} onToggle={act.toggleTask} />,
+      full: <TeamTodoFull tasks={state.tasks} today={today} view={view} setView={setView} onToggle={act.toggleTask} onDelete={act.deleteShared} />,
+    };
+  } else {
+    const items = state.personal[owner];
+    const open = items.filter((p) => !p.done);
+    const overdue = open.filter((p) => p.due && p.due < today).length;
+    todo = {
+      summary: [overdue ? `${overdue} overdue` : null, `${open.length} to do`, `${items.length - open.length} done`].filter(Boolean).join(' · '),
+      more: items.length > 3 ? `See all ${items.length} tasks` : 'Open the full list',
+      peek: <PersonalTodoPeek person={owner} items={items} today={today} onToggle={act.togglePersonal} />,
+      full: <PersonalTodoFull person={owner} items={items} today={today} onToggle={act.togglePersonal} onDelete={act.deletePersonal} onClear={act.clearPersonal} />,
+    };
+  }
+
+  const reached = goals.filter(isGoalDone).length;
+  const goalsEmpty = team ? 'Tap the plus to set one together.' : `Tap the plus to set one for ${owner}.`;
+  const doneToday = habits.filter((h) => h.checks[today]).length;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageBand team={team}
+        title={team ? 'Our Teamwork Tasks' : `${owner}'s page`}
+        text={team ? 'Shared chores, goals and habits. Tap a card to open it.' : `Just for ${owner}. Every star here still feeds Martin.`} />
+
+      <ExpandCard id={`${slug}-todo`} kicker={team ? 'Shared chores' : `${owner}'s tasks`} title="To-do list"
+        summary={todo.summary} open={isOpen('todo')} onToggle={() => flip('todo')}
+        onAdd={() => setAdding(`${owner}:todo`)} addLabel={team ? 'Add a teamwork chore' : `Add a task to ${owner}'s list`}
+        moreLabel={todo.more} peek={todo.peek} full={todo.full} />
+
+      <ExpandCard id={`${slug}-goals`} kicker={team ? 'Working toward together' : 'Working toward'} title="Goals"
+        summary={`${goals.length - reached} in progress · ${reached} reached`} open={isOpen('goals')} onToggle={() => flip('goals')}
+        onAdd={() => setAdding(`${owner}:goal`)} addLabel={team ? 'Add a shared goal' : `Add a goal for ${owner}`}
+        moreLabel={goals.length > 3 ? `See all ${goals.length} goals` : 'Open goals'}
+        peek={<GoalsPeek goals={goals} today={today} emptyText={goalsEmpty} />}
+        full={<GoalsFull goals={goals} today={today} emptyText={goalsEmpty}
+          onToggleStep={(gid, sid) => act.toggleStep(owner, gid, sid)}
+          onAddStep={(gid, title) => act.addStep(owner, gid, title)}
+          onDeleteStep={(gid, sid) => act.deleteStep(owner, gid, sid)}
+          onDeleteGoal={(gid) => act.deleteGoal(owner, gid)} />} />
+
+      <ExpandCard id={`${slug}-habits`} kicker={`Every day in ${monthName(ym)}`} title="Habit tracker"
+        summary={habits.length ? `${doneToday} of ${habits.length} done today` : 'Nothing tracked yet'}
+        open={isOpen('habits')} onToggle={() => flip('habits')}
+        onAdd={() => setAdding(`${owner}:habit`)} addLabel={team ? 'Add a shared habit' : `Add a habit for ${owner}`}
+        moreLabel={`See all of ${monthName(ym)}`}
+        peek={<HabitsPeek habits={habits} today={today} onToggle={(hid, day) => act.toggleHabit(owner, hid, day)} />}
+        full={<HabitsFull habits={habits} today={today} onToggle={(hid, day) => act.toggleHabit(owner, hid, day)}
+          onDelete={(hid) => act.deleteHabit(owner, hid)} />} />
+    </div>
+  );
+}
+
+/* ───────────────────────── App ───────────────────────── */
+function App() {
+  const [today, setToday] = useState(() => toKey(new Date()));
+  const [state, setState] = useState(() => loadState(toKey(new Date())));
+  const [tab, setTab] = useState('team');
+  const [view, setView] = useState('week');
+  const [pulse, setPulse] = useState(0);
+  const [floats, setFloats] = useState([]);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [adding, setAdding] = useState(null); // e.g. 'team:todo', 'Bailey:goal', 'Samuel:habit'
+  const [expanded, setExpanded] = useState({}); // which cards are open, per page
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }, [state]);
+
+  // Drain clock: overdue chores slowly empty Martin's meters (also catches up after the app was closed)
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now();
+      const key = toKey(new Date());
+      setToday((prev) => (prev === key ? prev : key));
+      setState((s) => {
+        const { rate } = drainInfo(s, key);
+        const hours = Math.max(0, (now - (s.lastTick || now)) / 3.6e6);
+        const loss = Math.min(MAX_CATCH_UP, rate * hours);
+        return { ...s, water: clamp(s.water - loss), food: clamp(s.food - loss), lastTick: now };
+      });
+    };
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const drain = useMemo(() => drainInfo(state, today), [state.tasks, state.personal, today]);
+
+  const celebrate = (amt) => {
+    setPulse((p) => p + 1);
+    const id = uid();
+    setFloats((f) => [...f, { id, amt }]);
+    setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 1300);
+  };
+
+  // Shared items are credited to whoever is selected; personal items to their owner.
+  const credit = (s, owner) => (owner === 'team' ? s.who : owner);
+  const dropLog = (log, ref) => {
+    const idx = log.map((l) => l.ref).lastIndexOf(ref);
+    return idx > -1 ? log.filter((_, i) => i !== idx) : log;
+  };
+
+  /* Shared chores */
+  const toggleTask = (id) => {
+    const current = state.tasks.find((t) => t.id === id);
+    if (!current) return;
+    const finishing = !isDone(current, today);
+    setState((s) => {
+      let delta = 0;
+      let log = s.log;
+      const tasks = s.tasks.map((t) => {
+        if (t.id !== id) return t;
+        const pts = REWARD[t.difficulty];
+        if (isDone(t, today)) {
+          delta = -pts;
+          log = dropLog(log, t.id);
+          return t.undo ? { ...t, ...t.undo, undo: null } : { ...t, lastDone: null, doneBy: null, due: today, undo: null };
+        }
+        delta = pts;
+        log = [...log, { id: uid(), ref: t.id, who: s.who, date: today }];
+        return { ...t, undo: { due: t.due, lastDone: t.lastDone, doneBy: t.doneBy }, lastDone: today, doneBy: s.who, due: addDays(today, FREQ_DAYS[t.freq]) };
+      });
+      return { ...s, tasks, log, water: clamp(s.water + delta), food: clamp(s.food + delta) };
+    });
+    if (finishing) celebrate(REWARD[current.difficulty]);
+  };
+
+  const addShared = (chore) => setState((s) => ({
+    ...s, tasks: [...s.tasks, { id: 'c' + uid(), lastDone: null, doneBy: null, undo: null, custom: true, ...chore }],
+  }));
+  const deleteShared = (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
+
+  /* Personal tasks */
+  const togglePersonal = (person, id) => {
+    const current = state.personal[person].find((p) => p.id === id);
+    if (!current) return;
+    const pts = REWARD[current.difficulty];
+    setState((s) => {
+      let log = s.log;
+      let delta = 0;
+      const list = s.personal[person].map((p) => {
+        if (p.id !== id) return p;
+        if (p.done) {
+          delta = -pts;
+          log = dropLog(log, p.id);
+          return { ...p, done: false, doneOn: null };
+        }
+        delta = pts;
+        log = [...log, { id: uid(), ref: p.id, who: person, date: today }];
+        return { ...p, done: true, doneOn: today };
+      });
+      return { ...s, personal: { ...s.personal, [person]: list }, log, water: clamp(s.water + delta), food: clamp(s.food + delta) };
+    });
+    if (!current.done) celebrate(pts);
+  };
+
+  const addPersonal = (person, task) => setState((s) => ({
+    ...s, personal: { ...s.personal, [person]: [...s.personal[person], { id: uid(), done: false, doneOn: null, ...task }] },
+  }));
+  const deletePersonal = (person, id) => setState((s) => ({
+    ...s, personal: { ...s.personal, [person]: s.personal[person].filter((p) => p.id !== id) },
+  }));
+  const clearPersonal = (person) => setState((s) => ({
+    ...s, personal: { ...s.personal, [person]: s.personal[person].filter((p) => !p.done) },
+  }));
+
+  /* Goals */
+  const setGoals = (owner, fn) => setState((s) => ({ ...s, goals: { ...s.goals, [owner]: fn(s.goals[owner] || []) } }));
+
+  const toggleStep = (owner, goalId, stepId) => {
+    const g = (state.goals[owner] || []).find((x) => x.id === goalId);
+    const st = g && g.steps.find((x) => x.id === stepId);
+    if (!st) return;
+    const finishing = !st.done;
+    const steps = g.steps.map((x) => (x.id === stepId ? { ...x, done: !x.done } : x));
+    const wasDone = isGoalDone(g);
+    const nowDone = steps.length > 0 && steps.every((x) => x.done);
+    let delta = finishing ? STEP_REWARD : -STEP_REWARD;
+    if (nowDone && !wasDone) delta += GOAL_BONUS;
+    if (wasDone && !nowDone) delta -= GOAL_BONUS;
+    const ref = `${goalId}:${stepId}`;
+    setState((s) => {
+      const log = finishing ? [...s.log, { id: uid(), ref, who: credit(s, owner), date: today }] : dropLog(s.log, ref);
+      const list = s.goals[owner].map((x) => (x.id === goalId ? { ...x, steps, doneOn: nowDone ? (x.doneOn || today) : null } : x));
+      return { ...s, goals: { ...s.goals, [owner]: list }, log, water: clamp(s.water + delta), food: clamp(s.food + delta) };
+    });
+    if (finishing) celebrate(delta);
+  };
+
+  const addGoal = (owner, { title, due, steps }) => setGoals(owner, (list) => [...list, makeGoal(title, due, steps)]);
+  const deleteGoal = (owner, id) => setGoals(owner, (list) => list.filter((g) => g.id !== id));
+  const addStep = (owner, goalId, title) => setGoals(owner, (list) => list.map((g) => (
+    g.id === goalId ? { ...g, doneOn: null, steps: [...g.steps, { id: uid(), title, done: false }] } : g
+  )));
+  const deleteStep = (owner, goalId, stepId) => setGoals(owner, (list) => list.map((g) => {
+    if (g.id !== goalId) return g;
+    const next = { ...g, steps: g.steps.filter((x) => x.id !== stepId) };
+    next.doneOn = isGoalDone(next) ? (g.doneOn || today) : null;
+    return next;
+  }));
+
+  /* Habits */
+  const setHabits = (owner, fn) => setState((s) => ({ ...s, habits: { ...s.habits, [owner]: fn(s.habits[owner] || []) } }));
+
+  const toggleHabit = (owner, habitId, day) => {
+    if (day > today) return;
+    const h = (state.habits[owner] || []).find((x) => x.id === habitId);
+    if (!h) return;
+    const checking = !h.checks[day];
+    const ref = `${habitId}:${day}`;
+    setState((s) => {
+      const list = s.habits[owner].map((x) => {
+        if (x.id !== habitId) return x;
+        const checks = { ...x.checks };
+        if (checking) checks[day] = true; else delete checks[day];
+        return { ...x, checks };
+      });
+      const log = checking ? [...s.log, { id: uid(), ref, who: credit(s, owner), date: today }] : dropLog(s.log, ref);
+      const delta = checking ? HABIT_REWARD : -HABIT_REWARD;
+      return { ...s, habits: { ...s.habits, [owner]: list }, log, water: clamp(s.water + delta), food: clamp(s.food + delta) };
+    });
+    if (checking) celebrate(HABIT_REWARD);
+  };
+  const addHabit = (owner, title) => setHabits(owner, (list) => [...list, makeHabit(title)]);
+  const deleteHabit = (owner, id) => setHabits(owner, (list) => list.filter((h) => h.id !== id));
+
+  const act = {
+    toggleTask, deleteShared, togglePersonal, deletePersonal, clearPersonal,
+    toggleStep, addStep, deleteStep, deleteGoal, toggleHabit, deleteHabit,
+  };
+
+  const ws = weekStart(today);
+  const starsThisWeek = (who) => state.log.filter((l) => l.who === who && l.date >= ws).length;
+
+  const tabs = [['team', 'Our Teamwork Tasks'], ['Bailey', 'Bailey'], ['Samuel', 'Samuel']];
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <main className="gutter mx-auto w-full max-w-[760px] py-5 sm:py-8 font-body">
+        <Dashboard water={state.water} food={state.food} drain={drain} pulse={pulse} floats={floats} today={today} />
+
+        {/* Who's checking things off */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3 shadow-sm ring-1 ring-cobalt/15">
+          <p className="text-sm text-cobalt">Who's checking off chores?</p>
+          <div className="flex gap-2" role="radiogroup" aria-label="Who is checking off chores">
+            {USERS.map((u) => {
+              const active = state.who === u;
+              return (
+                <motion.button key={u} type="button" role="radio" aria-checked={active} whileTap={{ scale: 0.94 }}
+                  onClick={() => setState((s) => ({ ...s, who: u }))}
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm transition-colors ${active ? 'bg-cobalt text-paper shadow' : 'bg-butter/60 text-ink hover:bg-cobalt/20'}`}>
+                  {u}
+                  <span className={`inline-flex items-center gap-0.5 text-xs tabular ${active ? 'text-butter' : 'text-ink/70'}`}>
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true"><path d={STAR_PATH} fill="#FFEC89" stroke="#A9820A" strokeWidth="1.8" /></svg>
+                    {starsThisWeek(u)}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+          <p className="basis-full text-xs text-ink/60 -mt-1">Stars earned this week. Shared chores, goals and habits are credited to whoever is selected.</p>
+        </div>
+
+        {/* Tabs */}
+        <div role="tablist" aria-label="Pages" className="mt-6 flex flex-wrap gap-2">
+          {tabs.map(([id, label]) => {
+            const active = tab === id;
+            const count = id === 'team'
+              ? state.tasks.filter((t) => !isDone(t, today) && t.due <= today).length
+              : state.personal[id].filter((p) => !p.done).length;
+            return (
+              <button key={id} type="button" role="tab" aria-selected={active} onClick={() => setTab(id)}
+                className={`relative rounded-full px-3.5 sm:px-4 py-2 text-sm transition-colors ${active ? 'text-paper' : 'text-cobalt bg-paper hover:bg-cobalt/15 ring-1 ring-cobalt/20'}`}>
+                {active && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-full bg-cobalt shadow" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                <span className="relative flex items-center gap-2">
+                  {id === 'team'
+                    ? <span className="font-display text-base"><span className="sm:hidden">Teamwork</span><span className="hidden sm:inline">{label}</span></span>
+                    : <span>{label}</span>}
+                  {count > 0 && (
+                    <span className={`tabular rounded-full px-1.5 text-[11px] leading-[18px] ${active ? 'bg-butter text-ink' : 'bg-cobalt/10 text-cobalt'}`}>{count}</span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-5" role="tabpanel">
+          <AnimatePresence mode="wait">
+            <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+              <Board owner={tab} state={state} today={today} view={view} setView={setView}
+                isOpen={(k) => !!expanded[`${tab}:${k}`]}
+                flip={(k) => setExpanded((e) => ({ ...e, [`${tab}:${k}`]: !e[`${tab}:${k}`] }))}
+                setAdding={setAdding} act={act} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <footer className="mt-10 flex flex-col items-center gap-2 text-center text-xs text-ink/60">
+          <p>Your lists, goals, habits and Martin's meters are saved on this device.</p>
+          {!confirmReset ? (
+            <button type="button" onClick={() => setConfirmReset(true)} className="text-cobalt underline decoration-dotted underline-offset-2">
+              Start over with the starter chores
+            </button>
+          ) : (
+            <div className="flex flex-wrap items-center justify-center gap-2" role="group" aria-label="Confirm reset">
+              <span className="text-ink/80">Reset every list, goal, habit and Martin's meters?</span>
+              <button type="button" onClick={() => { setState(makeInitialState(today)); setConfirmReset(false); }}
+                className="rounded-full bg-rust px-3 py-1 text-paper transition-colors hover:bg-cobalt">Yes, reset</button>
+              <button type="button" onClick={() => setConfirmReset(false)} className="rounded-full bg-paper px-3 py-1 text-cobalt ring-1 ring-cobalt/25 hover:bg-cobalt hover:text-paper">Cancel</button>
+            </div>
+          )}
+        </footer>
+      </main>
+
+      <AddChoreSheet open={adding === 'team:todo'} onClose={() => setAdding(null)} tasks={state.tasks} today={today} onAdd={addShared} />
+      {USERS.map((u) => (
+        <AddPersonalSheet key={'todo-' + u} open={adding === `${u}:todo`} onClose={() => setAdding(null)} person={u}
+          items={state.personal[u]} today={today} onAdd={addPersonal} />
+      ))}
+      {OWNERS.map((o) => (
+        <AddGoalSheet key={'goal-' + o} open={adding === `${o}:goal`} onClose={() => setAdding(null)} owner={o}
+          goals={state.goals[o] || []} today={today} onAdd={addGoal} />
+      ))}
+      {OWNERS.map((o) => (
+        <AddHabitSheet key={'habit-' + o} open={adding === `${o}:habit`} onClose={() => setAdding(null)} owner={o}
+          habits={state.habits[o] || []} onAdd={addHabit} />
+      ))}
+    </MotionConfig>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
